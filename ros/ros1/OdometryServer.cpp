@@ -21,6 +21,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 #include <Eigen/Core>
+#include <fstream>
+#include <iomanip>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -63,9 +65,31 @@ OdometryServer::OdometryServer(const ros::NodeHandle &nh, const ros::NodeHandle 
     pnh_.param("max_points_per_voxel", config_.max_points_per_voxel, config_.max_points_per_voxel);
     pnh_.param("initial_threshold", config_.initial_threshold, config_.initial_threshold);
     pnh_.param("min_motion_th", config_.min_motion_th, config_.min_motion_th);
+    pnh_.param("save_tum", save_tum_, save_tum_);
+    pnh_.param("tum_path", tum_path_, tum_path_);
+    pnh_.param("tum_rate", tum_rate_, tum_rate_);
     if (config_.max_range < config_.min_range) {
         ROS_WARN("[WARNING] max_range is smaller than min_range, setting min_range to 0.0");
         config_.min_range = 0.0;
+    }
+
+    if (save_tum_) {
+        if (tum_path_.empty()) {
+            ROS_WARN("[WARNING] save_tum is true but tum_path is empty, disabling TUM export");
+            save_tum_ = false;
+        } else {
+            tum_file_.open(tum_path_, std::ios::out);
+            if (!tum_file_.is_open()) {
+                ROS_WARN("[WARNING] Failed to open TUM file at %s, disabling TUM export",
+                         tum_path_.c_str());
+                save_tum_ = false;
+            } else {
+                tum_file_ << std::fixed << std::setprecision(9);
+                if (tum_rate_ > 0.0) {
+                    tum_period_ = 1.0 / tum_rate_;
+                }
+            }
+        }
     }
 
     // Construct the main KISS-ICP odometry node
@@ -170,6 +194,24 @@ void OdometryServer::PublishOdometry(const Sophus::SE3d &pose,
     odom_msg.header.frame_id = odom_frame_;
     odom_msg.pose.pose = tf2::sophusToPose(pose);
     odom_publisher_.publish(odom_msg);
+
+    // Save TUM trajectory (optional)
+    SaveTum(pose, stamp);
+}
+
+void OdometryServer::SaveTum(const Sophus::SE3d &pose, const ros::Time &stamp) {
+    if (!save_tum_ || !tum_file_.is_open()) return;
+
+    if (tum_period_ > 0.0 && !last_tum_stamp_.isZero()) {
+        const double dt = (stamp - last_tum_stamp_).toSec();
+        if (dt < tum_period_) return;
+    }
+
+    const auto t = pose.translation();
+    const Eigen::Quaterniond q = pose.unit_quaternion();
+    tum_file_ << stamp.toSec() << " " << t.x() << " " << t.y() << " " << t.z() << " "
+              << q.x() << " " << q.y() << " " << q.z() << " " << q.w() << "\n";
+    last_tum_stamp_ = stamp;
 }
 
 void OdometryServer::PublishClouds(const std::vector<Eigen::Vector3d> frame,

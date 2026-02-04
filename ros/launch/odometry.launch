@@ -5,13 +5,16 @@
   <arg name="visualize" default="true"/>
   <arg name="odom_frame" default="odom"/>
   <arg name="base_frame" default=""/>
-  <arg name="topic" default=""/>
+  <arg name="topic" default="/ouster/points"/>
   <arg name="publish_odom_tf" default="false"/>
+  <arg name="save_tum" default="true"/>
+  <arg name="tum_path" default="/home/tkw/AAA_baseline/KISS-ICP/src/kiss-icp/kiss.txt"/>
+  <arg name="tum_rate" default="2.0"/>
 
   <!-- KISS-ICP paramaters -->
   <arg name="deskew" default="false"/>
   <arg name="max_range" default="100.0" />
-  <arg name="min_range" default="5.0" />
+  <arg name="min_range" default="3.0" />
   <arg name="voxel_size" default="" />
 
   <!-- Odometry node -->
@@ -22,6 +25,9 @@
     <param name="base_frame" value="$(arg base_frame)"/>
     <param name="publish_odom_tf" value="$(arg publish_odom_tf)"/>
     <param name="visualize" value="$(arg visualize)"/>
+    <param name="save_tum" value="$(arg save_tum)"/>
+    <param name="tum_path" value="$(arg tum_path)"/>
+    <param name="tum_rate" value="$(arg tum_rate)"/>
     <!-- KISS-ICP params -->
     <param name="max_range" value="$(arg max_range)"/>
     <param name="min_range" value="$(arg min_range)"/>

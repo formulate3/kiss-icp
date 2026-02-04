@@ -33,6 +33,7 @@
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_ros/transform_listener.h>
 
+#include <fstream>
 #include <string>
 
 namespace kiss_icp_ros {
@@ -50,6 +51,9 @@ private:
     void PublishOdometry(const Sophus::SE3d &pose,
                          const ros::Time &stamp,
                          const std::string &cloud_frame_id);
+
+    /// Save trajectory to TUM format
+    void SaveTum(const Sophus::SE3d &pose, const ros::Time &stamp);
 
     /// Stream the debugging point clouds for visualization (if required)
     void PublishClouds(const std::vector<Eigen::Vector3d> frame,
@@ -91,6 +95,14 @@ private:
     /// Global/map coordinate frame.
     std::string odom_frame_{"odom"};
     std::string base_frame_{};
+
+    /// TUM trajectory export
+    bool save_tum_{false};
+    double tum_rate_{0.0};
+    double tum_period_{0.0};
+    ros::Time last_tum_stamp_{};
+    std::string tum_path_{};
+    std::ofstream tum_file_{};
 };
 
 }  // namespace kiss_icp_ros
